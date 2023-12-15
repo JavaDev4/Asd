@@ -1,0 +1,41 @@
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+
+import java.io.Reader;
+import java.io.FileReader;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class CSVToDatabase {
+
+    public static void main(String[] args) {
+        String url = "jdbc:oracle:thin:@yourhost:port:sid"; 
+        String user = "username";
+        String password = "password";
+        String csvFilePath = "path/to/your/csvfile.csv";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             Reader reader = new FileReader(csvFilePath);
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+             PreparedStatement pstmt = conn.prepareStatement("INSERT INTO Col_TP_Mapping (Source_Value, Target_Value) VALUES (?, ?)")) {
+
+            for (CSVRecord csvRecord : csvParser) {
+                int sourceValue = Integer.parseInt(csvRecord.get("Source_Value"));
+                String targetValue = csvRecord.get("Target_Value");
+
+                pstmt.setInt(1, sourceValue);
+                pstmt.setString(2, targetValue);
+                pstmt.executeUpdate();
+            }
+
+            System.out.println("Data inserted successfully.");
+        } catch (SQLException | NumberFormatException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
