@@ -34,3 +34,34 @@ public class CSVDatabaseService {
         }
     }
 }
+
+public class AddressUtils {
+
+    public static String getAddressPart(String address, String type) {
+        String[] parts = address.split(" ", 2);
+        if (parts.length < 2) {
+            throw new IllegalArgumentException("Invalid address format");
+        }
+
+        String houseNumber = parts[0];
+        String streetName = parts[1];
+
+        if ("number".equalsIgnoreCase(type)) {
+            return houseNumber;
+        } else if ("name".equalsIgnoreCase(type)) {
+            return streetName;
+        } else {
+            throw new IllegalArgumentException("Invalid type. Use 'number' or 'name'.");
+        }
+    }
+
+    public static void main(String[] args) {
+        String address = "1234 Main Street";
+
+        String houseNumber = getAddressPart(address, "number");
+        String streetName = getAddressPart(address, "name");
+
+        System.out.println("House Number: " + houseNumber);
+        System.out.println("Street Name: " + streetName);
+    }
+}
