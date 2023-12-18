@@ -56,7 +56,7 @@ public class AddressUtils {
     }
 
     public static void main(String[] args) {
-        String address = "1234 Main Street";
+        String address = "123 Waverly Blvd-Vacant Land";
 
         String houseNumber = getAddressPart(address, "number");
         String streetName = getAddressPart(address, "name");
