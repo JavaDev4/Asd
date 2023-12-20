@@ -109,4 +109,10 @@ public class DatabaseHelper {
     }
 }
 
+public Optional<String> findTfBySf(String tableName, String sfColumnName, String tfColumnName, String sfValue) {
+    String sql = "SELECT " + tfColumnName + " FROM " + tableName + " WHERE " + sfColumnName + " = ?";
+    RowMapper<String> rowMapper = (rs, rowNum) -> rs.getString(tfColumnName);
+    return jdbcTemplate.query(sql, rowMapper, sfValue).stream().findFirst();
+}
+
 
