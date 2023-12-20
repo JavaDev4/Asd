@@ -115,4 +115,32 @@ public Optional<String> findTfBySf(String tableName, String sfColumnName, String
     return jdbcTemplate.query(sql, rowMapper, sfValue).stream().findFirst();
 }
 
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+
+// ...
+
+@Autowired
+public ColTpRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    this.namedParameterJdbcTemplate = jdbcTemplate;
+}
+
+public Optional<String> findF2ByF1(String f1) {
+    String sql = "SELECT f2 FROM Col_tp WHERE f1 = :f1";
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("f1", f1);
+
+    return namedParameterJdbcTemplate.query(
+        sql, 
+        parameters, 
+        rs -> {
+            if (rs.next()) {
+                return Optional.of(rs.getString("f2"));
+            } else {
+                return Optional.empty();
+            }
+        }
+    );
+}
+
 
