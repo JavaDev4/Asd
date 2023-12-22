@@ -144,3 +144,61 @@ public Optional<String> findF2ByF1(String f1) {
 }
 
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class YourClassTest {
+
+    // Test with both descriptions empty
+    @Test(expected = IllegalArgumentException.class)
+    public void testSplitAddressPartEmptyDescriptions() {
+        YourClass.splitAddressPart("", "", "HouseNumber");
+    }
+
+    // Test with invalid address format (not enough parts)
+    @Test(expected = IllegalArgumentException.class)
+    public void testSplitAddressPartInvalidFormat() {
+        YourClass.splitAddressPart("123", "", "HouseNumber");
+    }
+
+    // Test with invalid type
+    @Test(expected = IllegalArgumentException.class)
+    public void testSplitAddressPartInvalidType() {
+        YourClass.splitAddressPart("123", " Waverly Street", "InvalidType");
+    }
+
+    // Test for exception message detail for empty descriptions
+    @Test
+    public void testSplitAddressPartExceptionMessageForEmpty() {
+        try {
+            YourClass.splitAddressPart("", "", "HouseNumber");
+            fail("Expected IllegalArgumentException not thrown");
+        } catch (IllegalArgumentException e) {
+            assertEquals("Both descriptions cannot be null or empty", e.getMessage());
+        }
+    }
+
+    // Test for exception message detail for invalid format
+    @Test
+    public void testSplitAddressPartExceptionMessageForInvalidFormat() {
+        try {
+            YourClass.splitAddressPart("123", "", "HouseNumber");
+            fail("Expected IllegalArgumentException not thrown");
+        } catch (IllegalArgumentException e) {
+            assertEquals("Invalid address format", e.getMessage());
+        }
+    }
+
+    // Test for exception message detail for invalid type
+    @Test
+    public void testSplitAddressPartExceptionMessageForInvalidType() {
+        try {
+            YourClass.splitAddressPart("123", " Waverly Street", "InvalidType");
+            fail("Expected IllegalArgumentException not thrown");
+        } catch (IllegalArgumentException e) {
+            assertEquals("Invalid type. Use 'HouseNumber' or 'StreetName'.", e.getMessage());
+        }
+    }
+
+    // Additional tests for other scenarios...
+}
