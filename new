@@ -210,3 +210,8 @@ public static String parseDate(Date input) {
         LocalDateTime localDateTime = LocalDateTime.ofInstant(input.toInstant(), ZoneId.systemDefault());
         return localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
     }
+
+public static String parseDate(String input) {
+    LocalDateTime date = LocalDateTime.parse(input, DateTimeFormatter.ofPattern("yyyy-MM-ddHH:mm:ssS"));
+    return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+}
