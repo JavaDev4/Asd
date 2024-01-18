@@ -202,3 +202,11 @@ public class YourClassTest {
 
     // Additional tests for other scenarios...
 }
+
+public static String parseDate(Date input) {
+        if (input == null) {
+            return null; // or handle this case as needed
+        }
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(input.toInstant(), ZoneId.systemDefault());
+        return localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    }
