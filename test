@@ -1,1 +1,33 @@
-asas
+SELECT 
+    sub.ID,
+    sub.obg_no, 
+    sub.obl_no,
+    sub.ACT_ESCROW_STATUS, 
+    sub.ESCROW_AMT_DUE, 
+    sub.alt_loan_num,
+    sub.earliest_date,
+    sub.proc_tp,
+    sub.amount
+FROM (
+    SELECT 
+        ROWNUM as ID,
+        edr.obg_no, 
+        edr.obl_no,
+        eai.ACT_ESCROW_STATUS, 
+        mep.ESCROW_AMT_DUE, 
+        obln.alt_loan_num,
+        obln.proc_tp,    
+        MIN(edr.dis_dt_1) OVER (PARTITION BY edr.obg_no, edr.obl_no) as earliest_date,
+        FIRST_VALUE(edr.disb_amount_1) OVER (PARTITION BY edr.obg_no, edr.obl_no ORDER BY edr.dis_dt_1) as amount
+        -- Include similar logic for other date and amount pairs, adjusting the PARTITION BY and ORDER BY clauses
+    FROM 
+        esc_disb_rec edr
+    LEFT JOIN ESC_ACCT_INDI2 eai ON edr.obg_no = eai.obg_no AND edr.esc_acct_no = eai.ESCROW_ACCT_NO AND edr.obl_no = eai.obl_no
+    LEFT JOIN mult_escrow_pntr mep ON mep.ob1_no = edr.obl_no AND mep.ob_no = edr.obg_no AND mep.ESCROW_ACCT_NO = eai.ESCROW_ACCT_NO
+    LEFT JOIN obn obln ON mep.obg_no = obln.obg_no AND mep.obl_no = obln.obl_no
+) sub
+WHERE 
+    sub.proc_tp >= 5000 
+    AND ((sub.disb_type >= 10000 AND sub.disb_type <= 19999) OR sub.disb_type = 40002)
+ORDER BY 
+    sub.ID;
