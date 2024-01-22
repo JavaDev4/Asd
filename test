@@ -16,10 +16,20 @@ FROM (
         eai.ACT_ESCROW_STATUS, 
         mep.ESCROW_AMT_DUE, 
         obln.alt_loan_num,
-        obln.proc_tp,    
-        MIN(edr.dis_dt_1) OVER (PARTITION BY edr.obg_no, edr.obl_no) as earliest_date,
-        FIRST_VALUE(edr.disb_amount_1) OVER (PARTITION BY edr.obg_no, edr.obl_no ORDER BY edr.dis_dt_1) as amount
-        -- Include similar logic for other date and amount pairs, adjusting the PARTITION BY and ORDER BY clauses
+        obln.proc_tp,
+        LEAST(
+            COALESCE(edr.dis_dt_1, TO_DATE('9999-12-31', 'YYYY-MM-DD')),
+            COALESCE(edr.dis_dt_2, TO_DATE('9999-12-31', 'YYYY-MM-DD')),
+            COALESCE(edr.dis_dt_3, TO_DATE('9999-12-31', 'YYYY-MM-DD'))
+            -- Add more lines here for additional date fields
+        ) AS earliest_date,
+        CASE 
+            WHEN edr.dis_dt_1 = earliest_date THEN edr.disb_amount_1
+            WHEN edr.dis_dt_2 = earliest_date THEN edr.disb_amount_2
+            WHEN edr.dis_dt_3 = earliest_date THEN edr.disb_amount_3
+            -- Add more lines here for additional amount fields
+            ELSE 0
+        END AS amount
     FROM 
         esc_disb_rec edr
     LEFT JOIN ESC_ACCT_INDI2 eai ON edr.obg_no = eai.obg_no AND edr.esc_acct_no = eai.ESCROW_ACCT_NO AND edr.obl_no = eai.obl_no
