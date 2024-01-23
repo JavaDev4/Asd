@@ -1,0 +1,34 @@
+import java.util.*;
+
+public class UniqueItemCount {
+
+    public static Map<String, Integer> countUniqueItemNumbers(List<Record> records) {
+        Map<String, Set<String>> uniqueItemsMap = new HashMap<>();
+        
+        // Populating the map with unique item numbers for each indicDataDesc1
+        for (Record record : records) {
+            uniqueItemsMap.computeIfAbsent(record.getIndicDataDesc1(), k -> new HashSet<>()).add(record.getItemNo());
+        }
+
+        // Transforming the map to have counts instead of sets of unique items
+        Map<String, Integer> itemCountMap = new HashMap<>();
+        for (Map.Entry<String, Set<String>> entry : uniqueItemsMap.entrySet()) {
+            itemCountMap.put(entry.getKey(), entry.getValue().size());
+        }
+
+        return itemCountMap;
+    }
+
+    // Example usage
+    public static void main(String[] args) {
+        List<Record> records = Arrays.asList(
+            new Record("Address1", "Item1"),
+            new Record("Address1", "Item2"),
+            new Record("Address2", "Item3"),
+            // ... add all your records
+        );
+
+        Map<String, Integer> result = countUniqueItemNumbers(records);
+        System.out.println(result);
+    }
+}
