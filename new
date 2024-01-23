@@ -215,3 +215,6 @@ public static String parseDate(String input) {
     LocalDateTime date = LocalDateTime.parse(input, DateTimeFormatter.ofPattern("yyyy-MM-ddHH:mm:ssS"));
     return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 }
+
+
+combinedDesc.split("(?<= |,|-|&)(?=\\d)"): This regular expression uses lookahead (?=\\d) and lookbehind (?<= |,|-|&) to find the position right before a digit (\\d) that follows a space, comma, dash, or ampersand. It splits the string at this position but retains the delimiter.
