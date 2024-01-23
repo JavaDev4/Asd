@@ -217,4 +217,15 @@ public static String parseDate(String input) {
 }
 
 
-combinedDesc.split("(?<= |,|-|&)(?=\\d)"): This regular expression uses lookahead (?=\\d) and lookbehind (?<= |,|-|&) to find the position right before a digit (\\d) that follows a space, comma, dash, or ampersand. It splits the string at this position but retains the delimiter.
+  private ConcurrentHashMap<String, AtomicInteger> addressCountMap = new ConcurrentHashMap<>();
+
+
+public int handleCount(String address, String itemNo) {
+        return addressCountMap.compute(address, (key, count) -> {
+            if (count == null) {
+                count = new AtomicInteger();
+            }
+            count.incrementAndGet();
+            return count;
+        }).get();
+    }
