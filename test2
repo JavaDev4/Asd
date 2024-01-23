@@ -1,16 +1,45 @@
-public static void assignItemCountConcurrently(List<Record> records) {
-        ConcurrentHashMap<String, Set<String>> itemCountMap = new ConcurrentHashMap<>();
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-        // Populate the itemCountMap in a thread-safe manner
-        records.parallelStream().forEach(record -> {
-            itemCountMap.computeIfAbsent(record.getAddress(), k -> new CopyOnWriteArraySet<>()).add(record.getItemNo());
-        });
+public class RecordCounter {
 
-        // Assign the count to each record
-        records.parallelStream().forEach(record -> {
-            int count = itemCountMap.get(record.getAddress()).size();
-            synchronized (record) {
-                record.setItemCount(count);
+    private final ConcurrentLinkedQueue<Record> recordQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentHashMap<String, Set<String>> itemCountMap = new ConcurrentHashMap<>();
+
+    /**
+     * Adds a new record to the queue.
+     *
+     * @param address The address of the record.
+     * @param itemNo  The item number of the record.
+     */
+    public void addRecord(String address, String itemNo) {
+        recordQueue.add(new Record(address, itemNo));
+    }
+
+    /**
+     * Processes all records in the queue and updates their item count.
+     */
+    public void processRecords() {
+        while (!recordQueue.isEmpty()) {
+            Record record = recordQueue.poll();
+            if (record != null) {
+                itemCountMap.computeIfAbsent(record.getAddress(), k -> new CopyOnWriteArraySet<>()).add(record.getItemNo());
             }
+        }
+
+        // Assign the count to each record in the map
+        itemCountMap.forEach((address, items) -> {
+            int count = items.size();
+            recordQueue.stream().filter(r -> r.getAddress().equals(address))
+                .forEach(r -> {
+                    synchronized (r) {
+                        r.setItemCount(count);
+                    }
+                });
         });
     }
+
+    // Record class and other parts of the class
+}
