@@ -229,3 +229,10 @@ public int handleCount(String address, String itemNo) {
             return count;
         }).get();
     }
+
+ private ConcurrentHashMap<String, Set<String>> addressItemMap = new ConcurrentHashMap<>();
+
+public int handleCount(String address, String itemNo) {
+        addressItemMap.computeIfAbsent(address, k -> ConcurrentHashMap.newKeySet()).add(itemNo);
+        return addressItemMap.get(address).size();
+    }
