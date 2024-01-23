@@ -1,0 +1,13 @@
+public static void assignItemCount(List<Record> records) {
+        // First, build the map of address to unique item numbers
+        Map<String, Set<String>> itemCountMap = new HashMap<>();
+        for (Record record : records) {
+            itemCountMap.computeIfAbsent(record.getAddress(), k -> new HashSet<>()).add(record.getItemNo());
+        }
+
+        // Now, assign the count to each record
+        for (Record record : records) {
+            int count = itemCountMap.get(record.getAddress()).size();
+            record.setItemCount(count);
+        }
+    }
