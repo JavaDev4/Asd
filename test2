@@ -1,13 +1,16 @@
-public static void assignItemCount(List<Record> records) {
-        // First, build the map of address to unique item numbers
-        Map<String, Set<String>> itemCountMap = new HashMap<>();
-        for (Record record : records) {
-            itemCountMap.computeIfAbsent(record.getAddress(), k -> new HashSet<>()).add(record.getItemNo());
-        }
+public static void assignItemCountConcurrently(List<Record> records) {
+        ConcurrentHashMap<String, Set<String>> itemCountMap = new ConcurrentHashMap<>();
 
-        // Now, assign the count to each record
-        for (Record record : records) {
+        // Populate the itemCountMap in a thread-safe manner
+        records.parallelStream().forEach(record -> {
+            itemCountMap.computeIfAbsent(record.getAddress(), k -> new CopyOnWriteArraySet<>()).add(record.getItemNo());
+        });
+
+        // Assign the count to each record
+        records.parallelStream().forEach(record -> {
             int count = itemCountMap.get(record.getAddress()).size();
-            record.setItemCount(count);
-        }
+            synchronized (record) {
+                record.setItemCount(count);
+            }
+        });
     }
