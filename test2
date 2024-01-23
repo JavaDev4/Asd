@@ -1,7 +1,7 @@
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class RecordCounter {
 
@@ -9,19 +9,20 @@ public class RecordCounter {
     private final ConcurrentHashMap<String, Set<String>> itemCountMap = new ConcurrentHashMap<>();
 
     /**
-     * Adds a new record to the queue.
+     * Adds a new record to the queue and processes all records.
      *
      * @param address The address of the record.
      * @param itemNo  The item number of the record.
      */
-    public void addRecord(String address, String itemNo) {
+    public void addAndProcessRecord(String address, String itemNo) {
         recordQueue.add(new Record(address, itemNo));
+        processRecords();
     }
 
     /**
      * Processes all records in the queue and updates their item count.
      */
-    public void processRecords() {
+    private void processRecords() {
         while (!recordQueue.isEmpty()) {
             Record record = recordQueue.poll();
             if (record != null) {
