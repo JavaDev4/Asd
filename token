@@ -1,0 +1,23 @@
+const tokenUrl = 'URL daemon/token';
+const getTokenRequest = {
+    method: 'POST',
+    url: tokenUrl,
+    header: {
+        'Accept': 'application/json',
+        'authorization': 'Basic <TOKEN HERE>',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: {
+        mode: 'urlencoded',
+        urlencoded: [{
+            key: "grant_type",
+            value: "client_credentials",
+            disabled: false
+        }]
+    }
+};
+pm.sendRequest(getTokenRequest, (err, response) => {
+    const jsonResponse = response.json();
+    const newAccessToken = jsonResponse.access_token;
+    pm.variables.set('accessToken', newAccessToken);
+});
