@@ -1,33 +1,15 @@
- public JpaItemWriter<U> jpaItemWriter() {
-        return new JpaItemWriter<U>() {
-            @Override
-            public void write(List<? extends U> items) {
-                EntityManager entityManager = entityManagerFactory.createEntityManager();
-                EntityTransaction transaction = null;
-
-                try {
-                    transaction = entityManager.getTransaction();
-                    transaction.begin();
-
-                    for (U item : items) {
-                        logger.info("Writing item: {}", item); // Log the item here
-                        entityManager.persist(item);
-                    }
-
-                    transaction.commit();
-                } catch (PersistenceException pe) {
-                    // Log the exception and the last item attempted to write
-                    logger.error("PersistenceException while writing item. Transaction is being rolled back.", pe);
-                    if (transaction != null) {
-                        transaction.rollback();
-                    }
-                    // Re-throw the exception to let the framework handle it
-                    throw pe;
-                } finally {
-                    if (entityManager.isOpen()) {
-                        entityManager.close();
-                    }
-                }
-            }
-        };
+public static String convertToDate(String input) {
+    if (input == null || input.length() != 6) {
+        throw new IllegalArgumentException("Input must be a string of length 6.");
     }
+
+    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyMMdd");
+    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    try {
+        LocalDate date = LocalDate.parse(input, inputFormatter);
+        return date.format(outputFormatter);
+    } catch (DateTimeParseException e) {
+        throw new IllegalArgumentException("Invalid date format: " + input, e);
+    }
+}
