@@ -44,3 +44,30 @@ echo Access Token: %ACCESS_TOKEN%
 
 endlocal
 
+
+----------
+@echo off
+setlocal
+
+:: First API call settings
+set API_URL1=http://example.com/api/token
+set USER=123
+set PASSWORD=456
+
+:: Second API call settings (replace with your actual values)
+set API_URL2=http://example.com/second/api
+set KEY1=value1
+set KEY2=value2
+
+:: First API call to get the access token
+set CURL_COMMAND1=curl -X POST "%API_URL1%" -d "user=%USER%" -d "password=%PASSWORD%"
+for /f "delims=" %%i in ('%CURL_COMMAND1% ^| powershell -Command "$input | ConvertFrom-Json | Select -ExpandProperty access_token"') do set ACCESS_TOKEN=%%i
+
+:: Second API call using the access token
+set CURL_COMMAND2=curl -X POST "%API_URL2%" -H "Authorization: Bearer %ACCESS_TOKEN%" -H "Content-Type: application/json" -d "{\"key1\":\"%KEY1%\", \"key2\":\"%KEY2%\"}"
+for /f "delims=" %%j in ('%CURL_COMMAND2% ^| powershell -Command "$input | ConvertFrom-Json | Select -ExpandProperty tokens"') do set TOKENS=%%j
+
+:: Echo the tokens from the second API call
+echo Tokens: %TOKENS%
+
+endlocal
