@@ -18,3 +18,29 @@ for /f "delims=" %%i in ('%CURL_COMMAND% ^| powershell -Command "$input | Conver
 echo Access Token: %ACCESS_TOKEN%
 
 endlocal
+
+
+
+example
+
+@echo off
+setlocal
+
+:: Replace this with your actual API endpoint
+set API_URL=http://example.com/api/token
+
+:: Set your parameters here
+set USER=123
+set PASSWORD=456
+
+:: Construct the curl command with your parameters
+set CURL_COMMAND=curl -X POST "%API_URL%" -d "user=%USER%" -d "password=%PASSWORD%"
+
+:: Execute curl command and parse the JSON response in PowerShell
+for /f "delims=" %%i in ('%CURL_COMMAND% ^| powershell -Command "$input | ConvertFrom-Json | Select -ExpandProperty access_token"') do set ACCESS_TOKEN=%%i
+
+:: Echo the access token
+echo Access Token: %ACCESS_TOKEN%
+
+endlocal
+
