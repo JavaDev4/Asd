@@ -102,3 +102,30 @@ for /f "delims=" %%j in ('%CURL_COMMAND2% ^| powershell -Command "$input | Conve
 echo Token Details: %TOKEN_DETAILS%
 
 endlocal
+
+
+
+print secodn api respo
+
+@echo off
+setlocal
+
+:: First API call to get the access token
+set API_URL1=http://example.com/api/token
+set USER=123
+set PASSWORD=456
+
+:: First API call to get the access token
+set CURL_COMMAND1=curl -X POST "%API_URL1%" -d "user=%USER%" -d "password=%PASSWORD%"
+for /f "delims=" %%i in ('%CURL_COMMAND1% ^| powershell -Command "$input | ConvertFrom-Json | Select -ExpandProperty access_token"') do set ACCESS_TOKEN=%%i
+
+:: Second API call settings (replace with your actual values)
+set API_URL2=http://example.com/second/api
+set JSON_PAYLOAD={"exampleKey1":"exampleValue1", "exampleKey2":"exampleValue2"}
+
+:: Second API call using the access token
+set CURL_COMMAND2=curl -X POST "%API_URL2%" -H "Authorization: Bearer %ACCESS_TOKEN%" -H "Content-Type: application/json" -d "%JSON_PAYLOAD%"
+echo Response from second API call:
+%CURL_COMMAND2%
+
+endlocal
