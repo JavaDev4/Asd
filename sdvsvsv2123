@@ -1,117 +1,101 @@
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.CSVWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
 @RestController
-@RequestMapping("/api")
-public class CSVProcessingController {
+public class GopController {
 
+    @Autowired
+    private GopService gopService;
+
+    @Qualifier("adfsRestTemplate")
     @Autowired
     private RestTemplate restTemplate;
 
     @Autowired
-    private CSVService csvService;
+    private ObjectMapper objectMapper;
 
-    private final String predefinedUrl = "http://example.com/api/number=";
+    private static final Logger Log = LoggerFactory.getLogger(GopController.class);
 
-  @GetMapping("/process-csv")
-    public void processCSV() throws IOException {
-        List<String> ecis = new ArrayList<>();
+    public String getEciNumber(Integer id) throws IOException {
+        String url = "https://api-apps-qw02-uat02-na.jpmchase.net/jpmc/customer/identity-resolution/ext";
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Your-Header-Key", "Your-Header-Value");
+        headers.set("channel-type", "test");
+        headers.set("trace-id", "123");
+        headers.set("uncommittedReadAllowIndicator", "true");
+        headers.set("client-id", "N766425");
 
-        List<String> gcids = csvService.readCSV();
-        for (String gcid : gcids) {
-            String url = predefinedUrl + gcid;
-            HttpEntity<String> entity = new HttpEntity<>(headers);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        return extractEcild(response.getBody());
+    }
 
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                url, 
-                HttpMethod.GET, 
-                entity, 
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
+    public String extractEcild(String responseBody) {
+        String extractedEcild = null;
+        try {
+            GopResponse[] responseDataArray = objectMapper.readValue(responseBody, GopResponse[].class);
+            if (responseDataArray.length > 0) {
+                String enterprisePartyIdentifier = responseDataArray[0].getEnterprisePartyIdentifier();
+                if (enterprisePartyIdentifier != null && !enterprisePartyIdentifier.isEmpty()) {
+                    extractedEcild = enterprisePartyIdentifier;
+                }
+            }
+        } catch (Exception exception) {
+            Log.error("Failed to extract ECI ID: {}", exception.getLocalizedMessage());
+        }
+        return extractedEcild;
+    }
 
-            if (response.getBody() != null) {
-                response.getBody().forEach(item -> {
-                    if (item.containsKey("eci")) {
-                        ecis.add(item.get("eci").toString());
-                    }
-                });
+    @GetMapping("/eci-numbers")
+    public void getEciNumbers() throws IOException {
+        String filepath = "path\\to\\your\\csv\\file.csv"; // Update the file path
+        List<Integer> ids = getIdsFromCsv(filepath);
+        List<String[]> dataLines = new ArrayList<>();
+        dataLines.add(new String[]{"GCID", "ECI"});
+
+        for (Integer currentId : ids) {
+            try {
+                String eci = getEciNumber(currentId);
+                if (eci != null) {
+                    dataLines.add(new String[]{String.valueOf(currentId), eci});
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
 
-        csvService.writeECIToCSV(ecis);
+        writeCsv(dataLines);
+    }
+
+    private List<Integer> getIdsFromCsv(String filepath) throws FileNotFoundException {
+        // ... existing implementation ...
+    }
+
+    private void writeCsv(List<String[]> dataLines) {
+        // ... existing implementation ...
+    }
+
+    // GopResponse class
+    public static class GopResponse {
+        private Long alternatePartyExternalIdentifier;
+        private String enterprisePartyIdentifier;
+        private String externalCurrentValueText;
+        private String externalSourceRecordName;
+        private String recordIdentifier;
+        private String externalMapStatusRecordName;
+        private String externalSourceRecordIdentifier;
+        private String externalMapStatusRecordIdentifier;
+
+        // getters and setters for each field
     }
 }
----------
-
-
-package com.yourpackage.service;
-
-import org.springframework.stereotype.Service;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-@Service
-public class CSVService {
-
-    private final String csvReadFilePath = "path/to/your/input/csvfile.csv";
-    private final String csvWriteFilePath = "path/to/your/output/csvfile.csv";
-
-    public List<String> readCSV() throws IOException {
-        List<String> gcids = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(csvReadFilePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                gcids.add(line.trim());
-            }
-        }
-        return gcids;
-    }
-
-    public void writeECIToCSV(List<String> ecis) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvWriteFilePath))) {
-            for (String eci : ecis) {
-                writer.write(eci);
-                writer.newLine();
-            }
-        }
-    }
-}
-
-
-
-----
-public void writeToCsv(String filePath, List<String> successfulResponses, List<String> failedResponses) throws IOException {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-        writer.write("Successful Responses,Failed Responses");
-        writer.newLine();
-
-        int maxSize = Math.max(successfulResponses.size(), failedResponses.size());
-        for (int i = 0; i < maxSize; i++) {
-            String success = i < successfulResponses.size() ? successfulResponses.get(i) : "";
-            String failure = i < failedResponses.size() ? failedResponses.get(i) : "";
-            writer.write(success + "," + failure);
-            writer.newLine();
-        }
-    }
-}
-
