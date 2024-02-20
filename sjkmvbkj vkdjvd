@@ -1,0 +1,78 @@
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+public class CSVProcessingController {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private CSVService csvService;
+
+    private final String predefinedUrl = "http://example.com/api/number=";
+
+    @GetMapping("/process-csv")
+    public void processCSV() throws IOException {
+        List<String> ecis = new ArrayList<>();
+        csvService.readCSV().forEach(number -> {
+            String url = predefinedUrl + number;
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            if (response != null && response.containsKey("eci")) {
+                ecis.add(response.get("eci").toString());
+            }
+        });
+        csvService.writeECIToCSV(ecis);
+    }
+}
+
+---
+
+import org.springframework.stereotype.Service;
+
+import java.io.BufferedWriter;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class CSVService {
+
+    private final String csvReadFilePath = "path/to/your/input/csvfile.csv";
+    private final String csvWriteFilePath = "path/to/your/output/csvfile.csv";
+
+    public List<String> readCSV() throws IOException {
+        List<String> numbers = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(csvReadFilePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] values = line.split(",");
+                for (String value : values) {
+                    numbers.add(value.trim());
+                }
+            }
+        }
+        return numbers;
+    }
+
+    public void writeECIToCSV(List<String> ecis) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvWriteFilePath))) {
+            for (String eci : ecis) {
+                writer.write(eci);
+                writer.newLine();
+            }
+        }
+    }
+}
