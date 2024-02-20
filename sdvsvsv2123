@@ -55,3 +55,43 @@ public class CSVProcessingController {
         csvService.writeECIToCSV(ecis);
     }
 }
+---------
+
+
+package com.yourpackage.service;
+
+import org.springframework.stereotype.Service;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class CSVService {
+
+    private final String csvReadFilePath = "path/to/your/input/csvfile.csv";
+    private final String csvWriteFilePath = "path/to/your/output/csvfile.csv";
+
+    public List<String> readCSV() throws IOException {
+        List<String> gcids = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(csvReadFilePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                gcids.add(line.trim());
+            }
+        }
+        return gcids;
+    }
+
+    public void writeECIToCSV(List<String> ecis) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvWriteFilePath))) {
+            for (String eci : ecis) {
+                writer.write(eci);
+                writer.newLine();
+            }
+        }
+    }
+}
