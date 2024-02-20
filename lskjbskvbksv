@@ -1,0 +1,74 @@
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+// Assuming GopResponse class is defined elsewhere
+
+public class YourClassName {
+    private static final Logger Log = LoggerFactory.getLogger(YourClassName.class);
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
+
+    // Constructor and other methods
+
+    public List<String> yourMethod(String url, HttpEntity<?> entity) {
+        ResponseEntity<List> response = restTemplate.exchange(url, HttpMethod.GET, entity, List.class);
+        if (response.getStatusCode() == HttpStatus.OK) {
+            String ecild = extractEcildAndWriteToCSV(response.getBody().toString());
+            System.out.println("URL Response is: " + response.toString());
+            return Collections.singletonList(ecild);
+        }
+        // Handle other response statuses as needed
+        return Collections.emptyList();
+    }
+
+    public String extractEcildAndWriteToCSV(String responseBody) {
+        String extractedEcild = null;
+        try {
+            GopResponse[] responseDataArray = objectMapper.readValue(responseBody, GopResponse[].class);
+            List<String> enterprisePartyIdentifiers = new ArrayList<>();
+
+            for (GopResponse response : responseDataArray) {
+                String enterprisePartyIdentifier = response.getEnterprisePartyIdentifier();
+                if (enterprisePartyIdentifier != null && !enterprisePartyIdentifier.isEmpty()) {
+                    extractedEcild = enterprisePartyIdentifier;
+                    enterprisePartyIdentifiers.add(extractedEcild);
+                }
+            }
+
+            // Write to CSV if we have any identifiers
+            if (!enterprisePartyIdentifiers.isEmpty()) {
+                writeToCSV(enterprisePartyIdentifiers);
+            }
+        } catch (Exception exception) {
+            Log.error("Failed to extract ECI ID: {}", exception.getLocalizedMessage());
+        }
+        return extractedEcild;
+    }
+
+    private void writeToCSV(List<String> identifiers) throws IOException {
+        String fileName = "enterprisePartyIdentifiers.csv";
+        try (
+            BufferedWriter writer = Files.newBufferedWriter(Paths.get(fileName));
+            CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("EnterprisePartyIdentifier"))
+        ) {
+            for (String identifier : identifiers) {
+                csvPrinter.printRecord(identifier);
+            }
+            csvPrinter.flush(); 
+        }
+    }
+}
