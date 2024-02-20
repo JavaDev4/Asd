@@ -26,14 +26,15 @@ public class CSVProcessingController {
 
     private final String predefinedUrl = "http://example.com/api/number=";
 
-    @GetMapping("/process-csv")
+  @GetMapping("/process-csv")
     public void processCSV() throws IOException {
         List<String> ecis = new ArrayList<>();
         HttpHeaders headers = new HttpHeaders();
         headers.set("Your-Header-Key", "Your-Header-Value");
 
-        csvService.readCSV().forEach(number -> {
-            String url = predefinedUrl + number;
+        List<String> gcids = csvService.readCSV();
+        for (String gcid : gcids) {
+            String url = predefinedUrl + gcid;
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
@@ -50,7 +51,7 @@ public class CSVProcessingController {
                     }
                 });
             }
-        });
+        }
 
         csvService.writeECIToCSV(ecis);
     }
