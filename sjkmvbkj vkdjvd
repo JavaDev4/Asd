@@ -53,26 +53,21 @@ public class CSVService {
     private final String csvReadFilePath = "path/to/your/input/csvfile.csv";
     private final String csvWriteFilePath = "path/to/your/output/csvfile.csv";
 
-    public List<String> readCSV() throws IOException {
-        List<String> numbers = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(csvReadFilePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] values = line.split(",");
-                for (String value : values) {
-                    numbers.add(value.trim());
-                }
-            }
-        }
-        return numbers;
-    }
+  
+    @GetMapping("/process-csv")
+    public void processCSV() throws IOException {
+        List<String> ecis = new ArrayList<>();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Custom-Header", "Value"); // Replace with your actual header
+        HttpEntity<String> entity = new HttpEntity<>("body", headers); // If body is not needed, pass null
 
-    public void writeECIToCSV(List<String> ecis) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvWriteFilePath))) {
-            for (String eci : ecis) {
-                writer.write(eci);
-                writer.newLine();
+        csvService.readCSV().forEach(number -> {
+            String url = predefinedUrl + number;
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
+            if (response.getBody() != null && response.getBody().containsKey("eci")) {
+                ecis.add(response.getBody().get("eci").toString());
             }
-        }
+        });
+        csvService.writeECIToCSV(ecis);
     }
 }
