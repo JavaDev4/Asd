@@ -1,15 +1,24 @@
 public String extractEcild(String responseBody) {
     String extractedEcild = null;
     try {
-        // Splitting the response by commas to get each key-value pair
-        String[] pairs = responseBody.split(", ");
-        for (String pair : pairs) {
-            // Splitting each pair by hyphen to separate key and value
-            String[] keyValue = pair.split("-");
-            if (keyValue.length == 2 && "enterprisePartyIdentifier".equals(keyValue[0])) {
-                extractedEcild = keyValue[1];
-                break; // Break the loop once we find the identifier
-            }
+        // Normalize the string to convert it into a JSON-like format
+        String normalizedResponse = responseBody
+            .replace("=", ":")
+            .replace("{", "{\"")
+            .replace("}", "\"}")
+            .replace(", ", "\", \"")
+            .replace(": ", "\":\"");
+
+        // Attempting to parse the normalized string as JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(normalizedResponse);
+        
+        // Assuming the response is an array and we need the first element
+        JsonNode firstElement = rootNode.get(0);
+        JsonNode enterprisePartyIdentifierNode = firstElement.get("enterprisePartyIdentifier");
+
+        if (enterprisePartyIdentifierNode != null) {
+            extractedEcild = enterprisePartyIdentifierNode.asText();
         }
     } catch (Exception exception) {
         Log.error("Failed to extract ECI ID: {}", exception.getLocalizedMessage());
