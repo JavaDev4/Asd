@@ -9,3 +9,11 @@ public void writeToCsv(Integer id, String ecild) {
         logger.error("Error writing to CSV file: {}", e.getMessage());
     }
 }
+
+
+    <!-- Define Console Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} - %msg%n</pattern>
+        </encoder>
+    </appender>
