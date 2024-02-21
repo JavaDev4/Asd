@@ -33,3 +33,26 @@ private void writeToCsv(Integer id, String ecild, int status) {
         logger.error("Error writing to CSV file: {}", e.getMessage());
     }
 }
+
+
+ private void writeToCsv(Integer id, String ecild, int status) {
+        String csvFile = "path/to/yourfile.csv"; // Replace with your actual file path
+        File file = new File(csvFile);
+
+        try (FileWriter writer = new FileWriter(file, true)) {
+            // Check if the file is new or empty and needs headers
+            if (!file.exists() || file.length() == 0) {
+                writer.append("GCID,ECIID,status\n");
+            }
+
+            // Write data
+            writer.append(id.toString())
+                  .append(',')
+                  .append(ecild != null ? ecild : "")
+                  .append(',')
+                  .append(String.valueOf(status))
+                  .append('\n');
+        } catch (IOException e) {
+            logger.error("Error writing to CSV file: {}", e.getMessage());
+        }
+    }
