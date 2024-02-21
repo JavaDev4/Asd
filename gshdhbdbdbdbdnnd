@@ -1,0 +1,22 @@
+
+        // System output
+        System.out.println("URL Response is: " + response.getBody());
+    }
+
+    private static ResponseEntity<List> makeRequestWithCounter(RestTemplate restTemplate, String url, HttpEntity<String> entity) {
+        incrementAndCheckCounter();
+        return restTemplate.exchange(url, HttpMethod.GET, entity, List.class);
+    }
+
+    private static void incrementAndCheckCounter() {
+        callCounter++;
+        if (callCounter % 9 == 0) {
+            try {
+                Thread.sleep(250); // Sleep for 1/4 second
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                // Handle the interruption appropriately
+            }
+        }
+    }
+}
