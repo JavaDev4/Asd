@@ -56,3 +56,30 @@ private void writeToCsv(Integer id, String ecild, int status) {
             logger.error("Error writing to CSV file: {}", e.getMessage());
         }
     }
+
+
+
+public List<String> getEciNumber(Integer id) {
+        String ecild = null;
+        int status;
+        HttpHeaders headers = new HttpHeaders();
+        // ... (Setting up headers)
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        String gpUrlNew = url + id;
+
+        try {
+            ResponseEntity<String> gpResponse = restTemplate.exchange(gpUrlNew, HttpMethod.GET, entity, String.class);
+            status = gpResponse.getStatusCodeValue(); // Capture the status code
+
+            if (gpResponse.getStatusCode() == HttpStatus.OK) {
+                ecild = extractEcild(gpResponse.getBody());
+            }
+        } catch (Exception exception) {
+            status = 500; // Default to 500 if an exception occurs
+            logger.error("Error during GCP API request for GID {}: {}", id, exception.getLocalizedMessage());
+        } finally {
+            writeToCsv(id, ecild, status); // Write to CSV in the finally block
+        }
+        return Collections.singletonList(ecild);
+    }
