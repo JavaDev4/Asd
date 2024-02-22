@@ -7,7 +7,7 @@ public class RateLimiter {
 
     public RateLimiter(int maxCallsPerMinute) {
         this.maxCallsPerMinute = maxCallsPerMinute;
-        this.permits = new Semaphore(0);
+        this.permits = new Semaphore(maxCallsPerMinute);
 
         this.scheduler = Executors.newScheduledThreadPool(1);
         long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
@@ -15,9 +15,7 @@ public class RateLimiter {
     }
 
     private void releasePermit() {
-        if (permits.availablePermits() < maxCallsPerMinute) {
-            permits.release();
-        }
+        permits.release(maxCallsPerMinute - permits.availablePermits());
     }
 
     public void acquire() throws InterruptedException {
@@ -34,5 +32,19 @@ public class RateLimiter {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
+    }
+
+    public static void main(String[] args) {
+        // Example usage
+        RateLimiter rateLimiter = new RateLimiter(10); // Allow 10 calls per minute
+        for (int i = 0; i < 20; i++) {
+            try {
+                rateLimiter.acquire();
+                System.out.println("Call " + (i + 1) + " permitted");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        rateLimiter.shutdown();
     }
 }
