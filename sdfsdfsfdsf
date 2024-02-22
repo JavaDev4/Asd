@@ -1,0 +1,31 @@
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class RateLimiter {
+    private final int maxCallsPerMinute;
+    private final Queue<Long> callTimestamps;
+
+    public RateLimiter(int maxCallsPerMinute) {
+        this.maxCallsPerMinute = maxCallsPerMinute;
+        this.callTimestamps = new LinkedList<>();
+    }
+
+    public synchronized void acquire() {
+        long now = System.currentTimeMillis();
+        while (callTimestamps.size() >= maxCallsPerMinute) {
+            long oldest = callTimestamps.peek();
+            if (now - oldest > 60000) { // 60 seconds
+                callTimestamps.poll();
+            } else {
+                try {
+                    Thread.sleep(oldest + 60000 - now);
+                    now = System.currentTimeMillis();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("RateLimiter interrupted", e);
+                }
+            }
+        }
+        callTimestamps.add(now);
+    }
+}
