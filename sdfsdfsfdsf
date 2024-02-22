@@ -1,67 +1,10 @@
-import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
-public class RateLimiter {
-    private final Semaphore permits;
-    private final ScheduledExecutorService scheduler;
-    private final int maxCallsPerMinute;
-
-    public RateLimiter(int maxCallsPerMinute) {
-        this.maxCallsPerMinute = maxCallsPerMinute;
-        this.permits = new Semaphore(maxCallsPerMinute);
-
-        this.scheduler = Executors.newScheduledThreadPool(1);
-        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
-        scheduler.scheduleAtFixedRate(this::releasePermit, 0, period, TimeUnit.MILLISECONDS);
-    }
-
-    private void releasePermit() {
-        int permitsReleased = maxCallsPerMinute - permits.availablePermits();
-        permits.release(permitsReleased);
-        log.info("Released {} permits. Available permits: {}", permitsReleased, permits.availablePermits());
-    }
-
-    public void acquire() throws InterruptedException {
-        permits.acquire();
-        log.info("Acquired permit. Available permits: {}", permits.availablePermits());
-    }
-
-    public void shutdown() {
-        scheduler.shutdown();
-        try {
-            if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            scheduler.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    public static void main(String[] args) {
-        // Example usage
-        RateLimiter rateLimiter = new RateLimiter(1200); // Allow 1200 calls per minute
-        for (int i = 0; i < 12000; i++) {
-            try {
-                rateLimiter.acquire();
-                System.out.println("Call " + (i + 1) + " permitted");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        rateLimiter.shutdown();
-    }
-}
-
-----
-
-
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.*;
 
+@Slf4j
 @Component
 public class RateLimiter implements InitializingBean, DisposableBean {
     private final Semaphore permits;
@@ -81,12 +24,15 @@ public class RateLimiter implements InitializingBean, DisposableBean {
     }
 
     private void releasePermit() {
-        int permitsReleased = maxCallsPerMinute - permits.availablePermits();
-        permits.release(permitsReleased);
+        int permitsAvailable = permits.availablePermits();
+        int permitsToRelease = Math.min(maxCallsPerMinute - permitsAvailable, permitsAvailable);
+        permits.release(permitsToRelease);
+        log.info("Released {} permits. Available permits: {}", permitsToRelease, permits.availablePermits());
     }
 
-    public void acquire() throws InterruptedException {
+    public void acquirePermit() throws InterruptedException {
         permits.acquire();
+        log.info("Acquired permit. Available permits: {}", permits.availablePermits());
     }
 
     @Override
@@ -100,6 +46,6 @@ public class RateLimiter implements InitializingBean, DisposableBean {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
+        log.info("Rate limiter shut down");
     }
 }
-
