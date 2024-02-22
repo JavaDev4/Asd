@@ -1,5 +1,7 @@
 import java.util.concurrent.*;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class RateLimiter {
     private final Semaphore permits;
     private final ScheduledExecutorService scheduler;
@@ -15,11 +17,14 @@ public class RateLimiter {
     }
 
     private void releasePermit() {
-        permits.release(maxCallsPerMinute - permits.availablePermits());
+        int permitsReleased = maxCallsPerMinute - permits.availablePermits();
+        permits.release(permitsReleased);
+        log.info("Released {} permits. Available permits: {}", permitsReleased, permits.availablePermits());
     }
 
     public void acquire() throws InterruptedException {
         permits.acquire();
+        log.info("Acquired permit. Available permits: {}", permits.availablePermits());
     }
 
     public void shutdown() {
@@ -36,8 +41,8 @@ public class RateLimiter {
 
     public static void main(String[] args) {
         // Example usage
-        RateLimiter rateLimiter = new RateLimiter(10); // Allow 10 calls per minute
-        for (int i = 0; i < 20; i++) {
+        RateLimiter rateLimiter = new RateLimiter(1200); // Allow 1200 calls per minute
+        for (int i = 0; i < 12000; i++) {
             try {
                 rateLimiter.acquire();
                 System.out.println("Call " + (i + 1) + " permitted");
