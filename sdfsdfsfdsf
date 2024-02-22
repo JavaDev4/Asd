@@ -6,15 +6,19 @@ public class RateLimiter {
 
     public RateLimiter(int maxCallsPerMinute) {
         this.permits = new Semaphore(maxCallsPerMinute);
-        this.scheduler = Executors.newScheduledThreadPool(1);
-        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
-        scheduler.scheduleAtFixedRate(this::releasePermit, 0, period, TimeUnit.MILLISECONDS);
-    }
 
-    private void releasePermit() {
-        if (permits.availablePermits() < maxCallsPerMinute) {
-            permits.release();
-        }
+        // Calculate the period for permit release
+        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
+
+        // Initialize the scheduled executor service
+        this.scheduler = Executors.newScheduledThreadPool(1);
+        
+        // Schedule a task to release a permit at a fixed rate
+        scheduler.scheduleAtFixedRate(() -> {
+            if (permits.availablePermits() < maxCallsPerMinute) {
+                permits.release();
+            }
+        }, 0, period, TimeUnit.MILLISECONDS);
     }
 
     public void acquire() {
