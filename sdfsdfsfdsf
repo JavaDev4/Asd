@@ -3,34 +3,36 @@ import java.util.concurrent.*;
 public class RateLimiter {
     private final Semaphore permits;
     private final ScheduledExecutorService scheduler;
+    private final int maxCallsPerMinute;
 
     public RateLimiter(int maxCallsPerMinute) {
-        this.permits = new Semaphore(maxCallsPerMinute);
+        this.maxCallsPerMinute = maxCallsPerMinute;
+        this.permits = new Semaphore(0);
 
-        // Calculate the period for permit release
-        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
-
-        // Initialize the scheduled executor service
         this.scheduler = Executors.newScheduledThreadPool(1);
-        
-        // Schedule a task to release a permit at a fixed rate
-        scheduler.scheduleAtFixedRate(() -> {
-            if (permits.availablePermits() < maxCallsPerMinute) {
-                permits.release();
-            }
-        }, 0, period, TimeUnit.MILLISECONDS);
+        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
+        scheduler.scheduleAtFixedRate(this::releasePermit, 0, period, TimeUnit.MILLISECONDS);
     }
 
-    public void acquire() {
-        try {
-            permits.acquire();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting for a permit", e);
+    private void releasePermit() {
+        if (permits.availablePermits() < maxCallsPerMinute) {
+            permits.release();
         }
+    }
+
+    public void acquire() throws InterruptedException {
+        permits.acquire();
     }
 
     public void shutdown() {
         scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }
