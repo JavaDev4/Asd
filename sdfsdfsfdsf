@@ -1,31 +1,32 @@
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.concurrent.*;
 
 public class RateLimiter {
-    private final int maxCallsPerMinute;
-    private final Queue<Long> callTimestamps;
+    private final Semaphore permits;
+    private final ScheduledExecutorService scheduler;
 
     public RateLimiter(int maxCallsPerMinute) {
-        this.maxCallsPerMinute = maxCallsPerMinute;
-        this.callTimestamps = new LinkedList<>();
+        this.permits = new Semaphore(maxCallsPerMinute);
+        this.scheduler = Executors.newScheduledThreadPool(1);
+        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
+        scheduler.scheduleAtFixedRate(this::releasePermit, 0, period, TimeUnit.MILLISECONDS);
     }
 
-    public synchronized void acquire() {
-        long now = System.currentTimeMillis();
-        while (callTimestamps.size() >= maxCallsPerMinute) {
-            long oldest = callTimestamps.peek();
-            if (now - oldest > 60000) { // 60 seconds
-                callTimestamps.poll();
-            } else {
-                try {
-                    Thread.sleep(oldest + 60000 - now);
-                    now = System.currentTimeMillis();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException("RateLimiter interrupted", e);
-                }
-            }
+    private void releasePermit() {
+        if (permits.availablePermits() < maxCallsPerMinute) {
+            permits.release();
         }
-        callTimestamps.add(now);
+    }
+
+    public void acquire() {
+        try {
+            permits.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for a permit", e);
+        }
+    }
+
+    public void shutdown() {
+        scheduler.shutdown();
     }
 }
