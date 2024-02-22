@@ -1,0 +1,26 @@
+@echo off
+setlocal enabledelayedexpansion
+
+:: First CURL command to get access token
+for /f "tokens=*" %%a in ('curl --location "URL 1" -header "Content-Type: application/x-www-form-urlencoded" --data-urlencode "client_id=123-ABC" --data-urlencode "un=123" --data-urlencode "pd=123" --data-urlencode "rl=sdfsf123" --data-urlencode "gt=sdfsdf"') do (
+    set "response=%%a"
+)
+
+:: Extract access token from the response (Assuming JSON response and using a placeholder extraction method)
+set "access_token=ExtractedTokenHere"
+
+:: Second CURL command using the access token
+for /f "tokens=*" %%b in ('curl --location "URL 2" -header "X-Correlation-ID: test" -header "Authorization: Bearer !access_token!" -header "Content-Type: application/json" --data "{"account id": "ksjdhad-123-ahvk-23","access type": "ab"}"') do (
+    set "response2=%%b"
+)
+
+:: Extract s3_a_k and s3_s_l from the response (Assuming JSON response and using a placeholder extraction method)
+set "s3_a_k=ExtractedKeyHere"
+set "s3_s_l=ExtractedSecretHere"
+
+:: Echo the tokens
+echo access_token: !access_token!
+echo s3_a_k: !s3_a_k!
+echo s3_s_l: !s3_s_l!
+
+endlocal
