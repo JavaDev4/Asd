@@ -53,3 +53,53 @@ public class RateLimiter {
         rateLimiter.shutdown();
     }
 }
+
+----
+
+
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.stereotype.Component;
+import java.util.concurrent.*;
+
+@Component
+public class RateLimiter implements InitializingBean, DisposableBean {
+    private final Semaphore permits;
+    private final ScheduledExecutorService scheduler;
+    private final int maxCallsPerMinute;
+
+    public RateLimiter() {
+        this.maxCallsPerMinute = 1200; // Default: Allow 1200 calls per minute
+        this.permits = new Semaphore(maxCallsPerMinute);
+        this.scheduler = Executors.newScheduledThreadPool(1);
+    }
+
+    @Override
+    public void afterPropertiesSet() {
+        long period = TimeUnit.MINUTES.toMillis(1) / maxCallsPerMinute;
+        scheduler.scheduleAtFixedRate(this::releasePermit, 0, period, TimeUnit.MILLISECONDS);
+    }
+
+    private void releasePermit() {
+        int permitsReleased = maxCallsPerMinute - permits.availablePermits();
+        permits.release(permitsReleased);
+    }
+
+    public void acquire() throws InterruptedException {
+        permits.acquire();
+    }
+
+    @Override
+    public void destroy() {
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+}
+
