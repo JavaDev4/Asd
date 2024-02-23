@@ -107,3 +107,23 @@ rateLimiter.acquire(); // Regulate the TPS
         }
 
         callCounter.incrementAndGet();
+------------
+
+
+ public synchronized List<String> getEciNumber(Integer id) throws JSONException, InterruptedException {
+        if (Instant.now().isAfter(windowStart.plusSeconds(60))) {
+            windowStart = Instant.now();
+            callCounter.set(0);
+        }
+
+        if (callCounter.get() >= MAX_CALLS_PER_MINUTE) {
+            long waitTime = 60 - (Instant.now().getEpochSecond() - windowStart.getEpochSecond());
+            log.info("Rate limit reached, waiting for {} seconds...", waitTime);
+            Thread.sleep(waitTime * 1000);
+            windowStart = Instant.now();
+            callCounter.set(0);
+        }
+
+        callCounter.incrementAndGet();
+
+        String ecild = null;
