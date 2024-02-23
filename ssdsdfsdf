@@ -129,6 +129,10 @@ rateLimiter.acquire(); // Regulate the TPS
         String ecild = null;
 --------
 
+  private final AtomicInteger transactionCount = new AtomicInteger(0);
+    private volatile Instant windowStart = Instant.now();
+    private static final int MAX_TRANSACTIONS = 1100;
+    private static final long WINDOW_LENGTH = 60; // seconds in a minute
 
  public synchronized List<String> getEciNumber(Integer id) throws JSONException, InterruptedException {
         // Check and wait if rate limit is reached
