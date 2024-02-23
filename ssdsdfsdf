@@ -73,3 +73,37 @@ rateLimiter.acquire(); // Regulate the TPS
                     windowStart = Instant.now(); // reset the window start time
                 }
             }
+---------
+
+
+
+    private static final int MAX_CALLS_PER_MINUTE = 1100;
+    private final AtomicInteger callCounter = new AtomicInteger(0);
+    private volatile Instant windowStart = Instant.now();
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    public synchronized void yourApiCallMethod(String gcpUrlNew, HttpEntity<String> entity) {
+        if (Instant.now().isAfter(windowStart.plusSeconds(60))) {
+            // Reset for a new window
+            windowStart = Instant.now();
+            callCounter.set(0);
+        }
+
+        if (callCounter.get() >= MAX_CALLS_PER_MINUTE) {
+            long waitTime = 60 - (Instant.now().getEpochSecond() - windowStart.getEpochSecond());
+            try {
+                Thread.sleep(waitTime * 1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Interrupted while waiting", e);
+                return;
+            }
+
+            // Reset for a new window
+            windowStart = Instant.now();
+            callCounter.set(0);
+        }
+
+        callCounter.incrementAndGet();
