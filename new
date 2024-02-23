@@ -1,238 +1,92 @@
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.PostConstruct;
-import java.io.Reader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.time.Duration;
+
+@Configuration
+public class ResilienceConfig {
+
+    @Bean
+    public RetryConfig retryConfig() {
+        return RetryConfig.custom()
+                .maxAttempts(100)
+                .waitDuration(Duration.ofSeconds(1))
+                .build();
+    }
+
+    @Bean
+    public RateLimiterConfig rateLimiterConfig() {
+        return RateLimiterConfig.custom()
+                .limitRefreshPeriod(Duration.ofSeconds(60))
+                .limitForPeriod(1100)
+                .timeoutDuration(Duration.ofSeconds(1))
+                .build();
+    }
+
+    @Bean
+    public RetryRegistry retryRegistry(RetryConfig retryConfig) {
+        return RetryRegistry.of(retryConfig);
+    }
+
+    @Bean
+    public RateLimiterRegistry rateLimiterRegistry(RateLimiterConfig rateLimiterConfig) {
+        return RateLimiterRegistry.of(rateLimiterConfig);
+    }
+}
+
+
+--------
+
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.retry.Retry;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
+
+// ... other imports
 
 @Service
-public class CSVDatabaseService {
+public class YourService {
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private RestTemplate restTemplate;
 
-    @PostConstruct
-    public void init() {
-        String csvFilePath = "path/to/your/csvfile.csv";
-        try (Reader reader = new FileReader(csvFilePath);
-             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+    @Autowired
+    private RetryRegistry retryRegistry;
 
-            for (CSVRecord record : csvParser) {
-                int sourceValue = Integer.parseInt(record.get("Source_Value"));
-                String targetValue = record.get("Target_Value");
-                jdbcTemplate.update("INSERT INTO Col_TP_Mapping (Source_Value, Target_Value) VALUES (?, ?)", sourceValue, targetValue);
-            }
+    @Autowired
+    private RateLimiterRegistry rateLimiterRegistry;
 
-            System.out.println("Data inserted successfully.");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
+    public List<String> getEciNumber(Integer id) throws JSONException, InterruptedException {
+        String ecild = null;
+        int status = 0;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        String gcpUrlNew = url + id;
 
-public class AddressUtils {
+        Retry retry = retryRegistry.retry("retryAndRateLimit");
+        RateLimiter rateLimiter = rateLimiterRegistry.rateLimiter("retryAndRateLimit");
 
-    public static String getAddressPart(String address, String type) {
-        String[] parts = address.split(" ", 2);
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid address format");
-        }
-
-        String houseNumber = parts[0];
-        String streetName = parts[1];
-
-        if ("number".equalsIgnoreCase(type)) {
-            return houseNumber;
-        } else if ("name".equalsIgnoreCase(type)) {
-            return streetName;
-        } else {
-            throw new IllegalArgumentException("Invalid type. Use 'number' or 'name'.");
-        }
-    }
-
-    public static void main(String[] args) {
-        String address = "123 Waverly Blvd-Vacant Land";
-
-        String houseNumber = getAddressPart(address, "number");
-        String streetName = getAddressPart(address, "name");
-
-        System.out.println("House Number: " + houseNumber);
-        System.out.println("Street Name: " + streetName);
-    }
-}
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-public class DatabaseHelper {
-
-    private static final String DB_URL = "jdbc:mysql://your_database_url";
-    private static final String USER = "your_username";
-    private static final String PASS = "your_password";
-
-    public static String getF2ValueForF1(String f1Value) {
-        String f2Value = null;
-        String sql = "SELECT f2 FROM Col_tp WHERE f1 = ?";
-
-        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, f1Value);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    f2Value = rs.getString("f2");
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return f2Value;
-    }
-
-    public static void main(String[] args) {
-        String f1Value = "someValue";
-        String f2Value = getF2ValueForF1(f1Value);
-        if (f2Value != null) {
-            System.out.println("F2 value: " + f2Value);
-        } else {
-            System.out.println("No matching record found for F1 value: " + f1Value);
-        }
-    }
-}
-
-public Optional<String> findTfBySf(String tableName, String sfColumnName, String tfColumnName, String sfValue) {
-    String sql = "SELECT " + tfColumnName + " FROM " + tableName + " WHERE " + sfColumnName + " = ?";
-    RowMapper<String> rowMapper = (rs, rowNum) -> rs.getString(tfColumnName);
-    return jdbcTemplate.query(sql, rowMapper, sfValue).stream().findFirst();
-}
-
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-
-// ...
-
-@Autowired
-public ColTpRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-    this.namedParameterJdbcTemplate = jdbcTemplate;
-}
-
-public Optional<String> findF2ByF1(String f1) {
-    String sql = "SELECT f2 FROM Col_tp WHERE f1 = :f1";
-    MapSqlParameterSource parameters = new MapSqlParameterSource();
-    parameters.addValue("f1", f1);
-
-    return namedParameterJdbcTemplate.query(
-        sql, 
-        parameters, 
-        rs -> {
-            if (rs.next()) {
-                return Optional.of(rs.getString("f2"));
-            } else {
-                return Optional.empty();
-            }
-        }
-    );
-}
-
-
-import org.junit.Test;
-import static org.junit.Assert.*;
-
-public class YourClassTest {
-
-    // Test with both descriptions empty
-    @Test(expected = IllegalArgumentException.class)
-    public void testSplitAddressPartEmptyDescriptions() {
-        YourClass.splitAddressPart("", "", "HouseNumber");
-    }
-
-    // Test with invalid address format (not enough parts)
-    @Test(expected = IllegalArgumentException.class)
-    public void testSplitAddressPartInvalidFormat() {
-        YourClass.splitAddressPart("123", "", "HouseNumber");
-    }
-
-    // Test with invalid type
-    @Test(expected = IllegalArgumentException.class)
-    public void testSplitAddressPartInvalidType() {
-        YourClass.splitAddressPart("123", " Waverly Street", "InvalidType");
-    }
-
-    // Test for exception message detail for empty descriptions
-    @Test
-    public void testSplitAddressPartExceptionMessageForEmpty() {
         try {
-            YourClass.splitAddressPart("", "", "HouseNumber");
-            fail("Expected IllegalArgumentException not thrown");
-        } catch (IllegalArgumentException e) {
-            assertEquals("Both descriptions cannot be null or empty", e.getMessage());
-        }
-    }
-
-    // Test for exception message detail for invalid format
-    @Test
-    public void testSplitAddressPartExceptionMessageForInvalidFormat() {
-        try {
-            YourClass.splitAddressPart("123", "", "HouseNumber");
-            fail("Expected IllegalArgumentException not thrown");
-        } catch (IllegalArgumentException e) {
-            assertEquals("Invalid address format", e.getMessage());
-        }
-    }
-
-    // Test for exception message detail for invalid type
-    @Test
-    public void testSplitAddressPartExceptionMessageForInvalidType() {
-        try {
-            YourClass.splitAddressPart("123", " Waverly Street", "InvalidType");
-            fail("Expected IllegalArgumentException not thrown");
-        } catch (IllegalArgumentException e) {
-            assertEquals("Invalid type. Use 'HouseNumber' or 'StreetName'.", e.getMessage());
-        }
-    }
-
-    // Additional tests for other scenarios...
-}
-
-public static String parseDate(Date input) {
-        if (input == null) {
-            return null; // or handle this case as needed
-        }
-        LocalDateTime localDateTime = LocalDateTime.ofInstant(input.toInstant(), ZoneId.systemDefault());
-        return localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-    }
-
-public static String parseDate(String input) {
-    LocalDateTime date = LocalDateTime.parse(input, DateTimeFormatter.ofPattern("yyyy-MM-ddHH:mm:ssS"));
-    return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-}
-
-
-  private ConcurrentHashMap<String, AtomicInteger> addressCountMap = new ConcurrentHashMap<>();
-
-
-public int handleCount(String address, String itemNo) {
-        return addressCountMap.compute(address, (key, count) -> {
-            if (count == null) {
-                count = new AtomicInteger();
+            ResponseEntity<String> gpResponse = restTemplate.execute(gcpUrlNew, HttpMethod.GET, request -> {}, 
+                 responseExtractor -> RateLimiter.decorateCheckedSupplier(rateLimiter, () -> Retry.decorateCheckedSupplier(retry, () -> responseExtractor.extractData(response))).get());
+            
+            status = gpResponse.getStatusCodeValue();
+            if (gpResponse.getStatusCode() == HttpStatus.OK) {
+                ecild = extractEcild(gpResponse.getBody());
             }
-            count.incrementAndGet();
-            return count;
-        }).get();
+        } catch (HttpClientErrorException exception) {
+            status = exception.getStatusCode().value();
+        } finally {
+            writeToCs(id, ecild, status);
+        }
+        // ... return or handle response
     }
 
- private ConcurrentHashMap<String, Set<String>> addressItemMap = new ConcurrentHashMap<>();
-
-public int handleCount(String address, String itemNo) {
-        addressItemMap.computeIfAbsent(address, k -> ConcurrentHashMap.newKeySet()).add(itemNo);
-        return addressItemMap.get(address).size();
-    }
+    // ... other methods
+}
