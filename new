@@ -101,3 +101,19 @@ public class YourService {
 
         
     
+
+
+resilience4j:
+  retry:
+    instances:
+      retryAndRateLimit:
+        maxRetryAttempts: 100
+        waitDuration: 1s
+        retryExceptions:
+          - org.springframework.web.client.HttpClientErrorException$TooManyRequests
+  ratelimiter:
+    instances:
+      retryAndRateLimit:
+        limitForPeriod: 1100
+        limitRefreshPeriod: 60s
+        timeoutDuration: 1s
