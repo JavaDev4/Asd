@@ -46,6 +46,7 @@ import io.github.resilience4j.retry.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 // ... other imports
 
@@ -74,18 +75,29 @@ public class YourService {
 
         try {
             ResponseEntity<String> gpResponse = restTemplate.execute(gcpUrlNew, HttpMethod.GET, request -> {}, 
-                 responseExtractor -> RateLimiter.decorateCheckedSupplier(rateLimiter, () -> Retry.decorateCheckedSupplier(retry, () -> responseExtractor.extractData(response))).get());
-            
-            status = gpResponse.getStatusCodeValue();
-            if (gpResponse.getStatusCode() == HttpStatus.OK) {
-                ecild = extractEcild(gpResponse.getBody());
-            }
+                responseExtractor -> RateLimiter.decorateCheckedSupplier(rateLimiter, 
+                    () -> Retry.decorateCheckedSupplier(retry, 
+                        () -> {
+                            ResponseEntity<String> response = responseExtractor.extractData(response);
+                            status = response.getStatusCodeValue();
+                            if (response.getStatusCode() == HttpStatus.OK) {
+                                ecild = extractEciId(response.getBody()); // Here we use your extractEciId method
+                            }
+                            return response;
+                        })).get());
         } catch (HttpClientErrorException exception) {
             status = exception.getStatusCode().value();
         } finally {
-            writeToCs(id, ecild, status);
+            writeToCs(id, ecild, status); // Ensure this method is implemented to handle the final step
         }
+
         // ... return or handle response
+    }
+
+    // Assume this method is implemented elsewhere in your class
+    private String extractEciId(String responseBody) {
+        // Extract ECI ID logic here
+        return extractedEciId;
     }
 
     // ... other methods
