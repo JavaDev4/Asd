@@ -1,0 +1,15 @@
+ synchronized (this) {
+            if (transactionCount >= MAX_TRANSACTIONS) {
+                try {
+                    log.info("Reached limit, pausing for a minute...");
+                    TimeUnit.SECONDS.sleep(PAUSE_DURATION);
+                    transactionCount = 0; // reset the count after the pause
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.error("Thread interrupted during pause", e);
+                    return;
+                }
+            }
+            rateLimiter.acquire(); // regulate the TPS
+            transactionCount++;
+        }
