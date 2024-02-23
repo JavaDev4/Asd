@@ -1,0 +1,48 @@
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
+
+// ... other imports
+
+@Service
+public class YourService {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private Retry retry;
+
+    @Autowired
+    private RateLimiter rateLimiter;
+
+    public List<String> getEciNumber(Integer id) throws JSONException, InterruptedException {
+        String ecild = null;
+        int status = 0;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        String gcpUrlNew = url + id;
+
+        Supplier<ResponseEntity<String>> apiCall = () -> restTemplate.exchange(gcpUrlNew, HttpMethod.GET, entity, String.class);
+
+        try {
+            ResponseEntity<String> gpResponse = Retry.decorateSupplier(retry, RateLimiter.decorateSupplier(rateLimiter, apiCall)).get();
+            status = gpResponse.getStatusCodeValue();
+            if (gpResponse.getStatusCode() == HttpStatus.OK) {
+                ecild = extractEcild(gpResponse.getBody());
+            }
+        } catch (HttpClientErrorException exception) {
+            status = exception.getStatusCode().value();
+        } finally {
+            writeToCs(id, ecild, status);
+        }
+        // ... return or handle response
+    }
+
+    // ... other methods
+}
