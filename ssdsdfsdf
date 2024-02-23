@@ -44,3 +44,32 @@
             rateLimiter.acquire(); // regulate the TPS
             transactionCount++;
         }
+
+-----
+    private final RateLimiter rateLimiter = RateLimiter.create(1100.0);
+    private final AtomicInteger transactionCount = new AtomicInteger(0);
+    private volatile Instant windowStart = Instant.now();
+    private static final int MAX_TRANSACTIONS = 1100;
+    private static final long WINDOW_LENGTH = 60; // seconds
+
+rateLimiter.acquire(); // Regulate the TPS
+
+        if (transactionCount.incrementAndGet() > MAX_TRANSACTIONS) {
+            synchronized (this) {
+                if (transactionCount.get() > MAX_TRANSACTIONS) {
+                    long elapsedTime = Duration.between(windowStart, Instant.now()).getSeconds();
+                    long timeToWait = WINDOW_LENGTH - elapsedTime;
+                    if (timeToWait > 0) {
+                        try {
+                            log.info("Rate limit reached, waiting for " + timeToWait + " seconds...");
+                            TimeUnit.SECONDS.sleep(timeToWait);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            log.error("Thread interrupted during wait", e);
+                            return;
+                        }
+                    }
+                    transactionCount.set(0); // reset the count for the new window
+                    windowStart = Instant.now(); // reset the window start time
+                }
+            }
