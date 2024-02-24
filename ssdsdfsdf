@@ -154,3 +154,63 @@ rateLimiter.acquire(); // Regulate the TPS
         String ecild = null;
 
 //Make api call here.
+---------------
+
+
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import java.time.Duration;
+import javax.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+
+@Service
+public class YourService {
+
+    private RateLimiter rateLimiter;
+
+    @Autowired
+    private RateLimiterRegistry rateLimiterRegistry;
+
+    @PostConstruct
+    public void init() {
+        RateLimiterConfig config = RateLimiterConfig.custom()
+                .limitForPeriod(500)
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .timeoutDuration(Duration.ofSeconds(5))
+                .build();
+        this.rateLimiter = rateLimiterRegistry.rateLimiter("gcpApiRateLimiter", config);
+    }
+
+    public List<String> getEciNumber(Integer id) throws JSONException, InterruptedException {
+        String ecild = null;
+        int status = 0;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        String gcpUrlNew = url + id;
+
+        try {
+            boolean permit = rateLimiter.getPermission(Duration.ofSeconds(5));
+            if (!permit) {
+                // wait for the leftover time
+                Duration waitTime = rateLimiter.reservePermission();
+                Thread.sleep(waitTime.toMillis());
+            }
+
+            ResponseEntity<String> gpResponse = restTemplate.exchange(gcpUrlNew, HttpMethod.GET, entity, String.class);
+            status = gpResponse.getStatusCodeValue();
+            if (gpResponse.getStatusCode() == HttpStatus.OK) {
+                ecild = extractEcild(gpResponse.getBody());
+            }
+        } catch (HttpClientErrorException exception) {
+            status = exception.getStatusCode().value();
+        } finally {
+            writeToCs(id, ecild, status);
+        }
+
+        return null; // Replace with appropriate return
+    }
+
+    // Additional methods
+}
