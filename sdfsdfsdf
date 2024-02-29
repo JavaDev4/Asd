@@ -86,3 +86,31 @@ public class MyTasklet implements Tasklet {
 
         return RepeatStatus.FINISHED;
     }
+
+
+---
+@Autowired
+private JdbcTemplate jdbcTemplate;
+
+@Value("${enableGepApiCall}")
+private boolean enableGepApiCall;
+
+public String fetchEcildByGcId(final String GCID) throws InterruptedException {
+    if (!enableGepApiCall) {
+        // Handle the case where the API call is disabled
+        throw new IllegalStateException("GEP API call is disabled.");
+    }
+
+    try {
+        String eci = jdbcTemplate.queryForObject(
+            "SELECT ECI FROM table_2 WHERE GCID = ?",
+            new Object[]{GCID},
+            String.class
+        );
+
+        return eci; // or process it further if needed
+    } catch (EmptyResultDataAccessException e) {
+        // Handle the case where no ECI is found for the GCID
+        return null; // or handle as required
+    }
+}
