@@ -71,3 +71,18 @@ public class MyTasklet implements Tasklet {
         return RepeatStatus.FINISHED;
     }
 }
+
+
+
+@Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        if ("yes".equalsIgnoreCase(flagValue)) {
+            String eci = jdbcTemplate.queryForObject("SELECT ECI FROM my_table WHERE GCID = ?", new Object[]{gcid}, String.class);
+
+            // Logic to handle the ECI, e.g., storing it in the ExecutionContext or processing it further
+            System.out.println("Fetched ECI: " + eci);
+            chunkContext.getStepContext().getStepExecution().getExecutionContext().put("ECI", eci);
+        }
+
+        return RepeatStatus.FINISHED;
+    }
