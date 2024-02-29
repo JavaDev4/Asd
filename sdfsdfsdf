@@ -41,3 +41,33 @@ public RepeatStatus execute(StepContribution contribution, ChunkContext chunkCon
     private void callExternalApi(String V2) {
         // Implementation of your API call
     }
+
+------
+
+@Component
+public class MyTasklet implements Tasklet {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    @Value("${myapp.flagValue}")
+    private String flagValue;
+
+    @Autowired
+    public MyTasklet(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        if ("yes".equalsIgnoreCase(flagValue)) {
+            String V1 = jdbcTemplate.queryForObject("SELECT V1 FROM my_table", String.class);
+            String V2 = jdbcTemplate.queryForObject("SELECT V2 FROM my_table", String.class);
+
+            // Assuming you want to use V1 and V2 later in the job
+            chunkContext.getStepContext().getStepExecution().getExecutionContext().put("V1", V1);
+            chunkContext.getStepContext().getStepExecution().getExecutionContext().put("V2", V2);
+        }
+
+        return RepeatStatus.FINISHED;
+    }
+}
