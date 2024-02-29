@@ -1,0 +1,12 @@
+ @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        String flagValue = jdbcTemplate.queryForObject("SELECT flag FROM my_table WHERE condition = ?", String.class, "conditionValue");
+
+        if ("yes".equalsIgnoreCase(flagValue)) {
+            String V2 = jdbcTemplate.queryForObject("SELECT V2 FROM my_table WHERE condition = ?", String.class, "conditionValue");
+            // Here you can return V2, log it, or use it as needed
+            System.out.println("Fetched V2: " + V2);
+        }
+
+        return RepeatStatus.FINISHED;
+    }
