@@ -10,3 +10,34 @@
 
         return RepeatStatus.FINISHED;
     }
+
+
+
+@Override
+public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+    String flagValue = jdbcTemplate.queryForObject("SELECT flag FROM my_table WHERE condition = ?", String.class, "conditionValue");
+
+    if ("yes".equalsIgnoreCase(flagValue)) {
+        String V2 = jdbcTemplate.queryForObject("SELECT V2 FROM my_table WHERE condition = ?", String.class, "conditionValue");
+        chunkContext.getStepContext().getStepExecution().getExecutionContext().put("V2", V2);
+    }
+
+    return RepeatStatus.FINISHED;
+}
+
+
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        String V2 = (String) chunkContext.getStepContext().getStepExecution().getExecutionContext().get("V2");
+
+        if (V2 != null) {
+            // Make your API call here with V2
+            callExternalApi(V2);
+        }
+
+        return RepeatStatus.FINISHED;
+    }
+
+    private void callExternalApi(String V2) {
+        // Implementation of your API call
+    }
