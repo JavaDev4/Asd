@@ -110,3 +110,19 @@ private void writeToCsv(Integer id, String ecild, int status) {
         logger.error("Error writing to CSV file: {}", e.getMessage());
     }
 }
+
+---
+if (outputList != null && !outputList.isEmpty()) {
+                for (Map<String, Object> row : outputList) {
+                    // Log each row or check for specific access-related issues
+                    if (row.containsKey("error") || row.containsKey("status")) {
+                        log.error("Access issue or error found: {}", row);
+                    } else {
+                        // Log normally if no issues are detected
+                        log.info("Row data: {}", row);
+                    }
+                }
+            } else {
+                log.info("No results returned from the procedure.");
+            }
+
