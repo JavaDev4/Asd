@@ -18,14 +18,14 @@ public class YourEntity {
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface YourRepository extends JpaRepository<YourEntity, Long> {
-    // Add custom query methods if needed
+   @Query("SELECT e FROM YourEntity e JOIN OtherEntity o ON e.someId = o.someId WHERE o.someProperty = :somePropertyValue")
+    List<YourEntity> findDataWithCustomJoinQuery(String somePropertyValue);
 }
 ---------
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
-import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,7 +50,8 @@ public class DataLoadingService implements CommandLineRunner {
 
     @PostConstruct
     public void loadData() {
-        List<YourEntity> records = yourRepository.findAll();
+        String somePropertyValue = "someValue"; // Provide the actual value or parameter
+        List<YourEntity> records = yourRepository.findDataWithCustomJoinQuery(somePropertyValue);
         dataMap = new ConcurrentHashMap<>();
         for (YourEntity record : records) {
             dataMap.put(record.getColumn1(), record);
@@ -61,7 +62,6 @@ public class DataLoadingService implements CommandLineRunner {
         return dataMap.get(key);
     }
 }
-
 
 
 
