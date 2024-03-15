@@ -1,3 +1,26 @@
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
+@Entity
+public class YourEntity {
+
+    @Id
+    private Long id;
+    private String column1;
+    private String column2;
+    private String column3;
+
+    // Getters and setters
+}
+
+
+-----------
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface YourRepository extends JpaRepository<YourEntity, Long> {
+    // Add custom query methods if needed
+}
+---------
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -14,7 +37,7 @@ public class DataLoadingService implements CommandLineRunner {
     private YourRepository yourRepository;
 
     @Value("${data.loading.enabled}")
-    private boolean dataLoadingEnabled; // Inject the property value
+    private boolean dataLoadingEnabled;
 
     private Map<String, YourEntity> dataMap;
 
@@ -27,10 +50,9 @@ public class DataLoadingService implements CommandLineRunner {
 
     @PostConstruct
     public void loadData() {
-        List<YourEntity> records = yourRepository.findAll(); // Assuming your repository extends JpaRepository
-        dataMap = new ConcurrentHashMap<>(); // Use ConcurrentHashMap for thread-safe reading
+        List<YourEntity> records = yourRepository.findAll();
+        dataMap = new ConcurrentHashMap<>();
         for (YourEntity record : records) {
-            // Assuming the first column is the key
             dataMap.put(record.getColumn1(), record);
         }
     }
@@ -39,3 +61,8 @@ public class DataLoadingService implements CommandLineRunner {
         return dataMap.get(key);
     }
 }
+
+
+
+
+
