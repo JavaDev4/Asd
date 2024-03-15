@@ -1,0 +1,41 @@
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Service;
+import javax.annotation.PostConstruct;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+public class DataLoadingService implements CommandLineRunner {
+
+    @Autowired
+    private YourRepository yourRepository;
+
+    @Value("${data.loading.enabled}")
+    private boolean dataLoadingEnabled; // Inject the property value
+
+    private Map<String, YourEntity> dataMap;
+
+    @Override
+    public void run(String... args) throws Exception {
+        if (dataLoadingEnabled) {
+            loadData();
+        }
+    }
+
+    @PostConstruct
+    public void loadData() {
+        List<YourEntity> records = yourRepository.findAll(); // Assuming your repository extends JpaRepository
+        dataMap = new ConcurrentHashMap<>(); // Use ConcurrentHashMap for thread-safe reading
+        for (YourEntity record : records) {
+            // Assuming the first column is the key
+            dataMap.put(record.getColumn1(), record);
+        }
+    }
+
+    public YourEntity getRecord(String key) {
+        return dataMap.get(key);
+    }
+}
